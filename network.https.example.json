@@ -1,0 +1,4 @@
+{
+  "server_url": "https://inventory.example.org",
+  "ca_file": "company-ca.pem"
+}

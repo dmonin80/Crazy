@@ -1,0 +1,6 @@
+# Replace the hostname and certificate paths with your actual server settings.
+# Keep the private key on the HTTPS proxy machine; never distribute it to clients.
+inventory.example.org {
+    tls /path/to/server-cert.pem /path/to/server-key.pem
+    reverse_proxy 127.0.0.1:8765
+}

@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+data/
+client_settings.json
+local_server.json
+local_*.lock
+build/
+dist/
+*.spec
