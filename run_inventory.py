@@ -125,7 +125,7 @@ def desktop(root, lan=False):
     window.setWindowTitle(
         "АХО — инвентаризация · "
         + ("СЕРВЕР ОБЩЕЙ БАЗЫ" if lan else "сервер и клиент на этом ПК")
-        + " · 0.3.0"
+        + " · 0.3.1"
     )
     window.statusBar().showMessage("Локальный сервер запущен · " + url(config))
 
@@ -151,8 +151,7 @@ def desktop(root, lan=False):
     if lan:
         window.network_label = W.QLabel("Общая база · сетевой сервер: порт 8765")
         window.statusBar().addPermanentWidget(window.network_label)
-    if lan:
-        enable_periodic_refresh(window)
+    enable_periodic_refresh(window)
     window.show()
     progress.close()
 
@@ -269,7 +268,7 @@ def network_desktop(root, address=None, ca_file=None):
     window = Client(settings_root=root, server_url=address.rstrip("/"))
     if ca_file:
         window.settings["ca_file"] = ca_file
-    window.setWindowTitle("АХО — общая база · " + address + " · 0.3.0")
+    window.setWindowTitle("АХО — общая база · " + address + " · 0.3.1")
     menu = window.menuBar().addMenu("Система")
     menu.addAction(
         "Адрес сервера",
@@ -287,17 +286,20 @@ def enable_periodic_refresh(window):
     from PySide6 import QtCore, QtWidgets as W
 
     timer = QtCore.QTimer(window)
-    timer.setInterval(15000)
+    seconds = int(window.preferences.value("refresh_seconds", 15))
+    timer.setInterval(max(1, seconds) * 1000)
+    window.refresh_timer = timer
 
     def update():
-        if window.token and not W.QApplication.activeModalWidget():
+        if window.token and not window._busy and not W.QApplication.activeModalWidget():
             try:
                 window.refresh()
             except Exception as exc:
                 window.statusBar().showMessage(str(exc))
 
     timer.timeout.connect(update)
-    timer.start()
+    if seconds:
+        timer.start()
     return timer
 
 

@@ -12,7 +12,7 @@ from pathlib import Path
 
 import httpx
 
-VERSION = '0.3.0'
+VERSION = '0.3.1'
 SERVICE = 'aho_inventory'
 
 

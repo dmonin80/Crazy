@@ -47,7 +47,7 @@ class PendingOperation(RuntimeError):
 class Client(W.QMainWindow):
     def __init__(self, local_url=None, settings_root=None, server_url=None):
         super().__init__()
-        self.setWindowTitle("АХО — система инвентаризации · 0.3.0")
+        self.setWindowTitle("АХО — система инвентаризации · 0.3.1")
         self.resize(1400, 800)
         root = (
             Path(settings_root)
@@ -212,7 +212,10 @@ class Client(W.QMainWindow):
         system.addAction(
             "Незавершённые операции", lambda: self.safe(self.pending_operations)
         )
-        system.addAction("Резервная копия", lambda: self.safe(self.create_backup))
+        system.addAction(
+            "Интервал обновления…", lambda: self.safe(self.refresh_settings)
+        )
+        system.addAction("Резервные копии", lambda: self.safe(self.create_backup))
         system.addAction("Журнал действий", lambda: self.safe(self.show_audit))
         self.statusBar().showMessage("Подключитесь к серверу")
         self.setStyleSheet(
@@ -961,12 +964,25 @@ class Client(W.QMainWindow):
         DocumentsDialog(self).exec()
 
     def create_backup(self):
-        result = self.api("/backup", {})
-        W.QMessageBox.information(
+        from .backup_dialog import BackupDialog
+
+        BackupDialog(self).exec()
+
+    def refresh_settings(self):
+        value, ok = W.QInputDialog.getInt(
             self,
-            "Резервная копия",
-            "На сервере создана проверенная копия: " + result["filename"],
+            "Автоматическое обновление",
+            "Интервал в секундах (0 — отключить):",
+            int(self.preferences.value("refresh_seconds", 15)),
+            0,
+            86400,
         )
+        if ok:
+            self.preferences.setValue("refresh_seconds", value)
+            if hasattr(self, "refresh_timer"):
+                self.refresh_timer.stop()
+                if value:
+                    self.refresh_timer.start(value * 1000)
 
     def show_audit(self):
         rows = self.api("/audit")

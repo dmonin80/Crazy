@@ -29,6 +29,17 @@ class Conflict(ValueError):
     pass
 
 
+def synchronized(method):
+    from functools import wraps
+
+    @wraps(method)
+    def call(self, *args, **kwargs):
+        with self._maintenance_lock:
+            return method(self, *args, **kwargs)
+
+    return call
+
+
 class Store:
     def __init__(self, root):
         self.root = Path(root).resolve()
@@ -38,6 +49,8 @@ class Store:
         self.path = self.root / "inventory.sqlite3"
         import threading
 
+        self._maintenance_lock = threading.RLock()
+        self._generation = 0
         self._login_lock = threading.Lock()
         self._login_attempts = {}
         existed = self.path.exists()
@@ -87,17 +100,19 @@ CREATE TABLE IF NOT EXISTS findings(id TEXT PRIMARY KEY,session_id TEXT NOT NULL
 
     @contextmanager
     def transaction(self):
-        c = self.connect()
-        try:
-            c.execute("BEGIN IMMEDIATE")
-            yield c
-            c.commit()
-        except Exception:
-            c.rollback()
-            raise
-        finally:
-            c.close()
+        with self._maintenance_lock:
+            c = self.connect()
+            try:
+                c.execute("BEGIN IMMEDIATE")
+                yield c
+                c.commit()
+            except Exception:
+                c.rollback()
+                raise
+            finally:
+                c.close()
 
+    @synchronized
     def read(self, sql, args=()):
         with closing(self.connect()) as c:
             return [dict(r) for r in c.execute(sql, args)]
@@ -179,6 +194,7 @@ CREATE TABLE IF NOT EXISTS findings(id TEXT PRIMARY KEY,session_id TEXT NOT NULL
             self._login_attempts.pop(key, None)
         return {"token": token, "role": row["role"], "name": name}
 
+    @synchronized
     def user(self, token):
         import time
 
@@ -190,8 +206,11 @@ CREATE TABLE IF NOT EXISTS findings(id TEXT PRIMARY KEY,session_id TEXT NOT NULL
             raise PermissionError("Требуется вход")
         from .security import enrich
 
-        return enrich(self, rows[0])
+        result = enrich(self, rows[0])
+        result["_generation"] = self._generation
+        return result
 
+    @synchronized
     def mutate(
         self,
         user,
@@ -204,6 +223,8 @@ CREATE TABLE IF NOT EXISTS findings(id TEXT PRIMARY KEY,session_id TEXT NOT NULL
     ):
         from .security import require, action_permission, enrich
 
+        if user.get("_generation", self._generation) != self._generation:
+            raise PermissionError("База восстановлена. Войдите снова")
         user = enrich(self, dict(user))
         if action == "batch-transfer":
             for line in payload.get("lines", []):
@@ -334,6 +355,7 @@ CREATE TABLE IF NOT EXISTS findings(id TEXT PRIMARY KEY,session_id TEXT NOT NULL
             "units": qnumber(qtotal(r["quantity"] for r in rows)),
         }
 
+    @synchronized
     def stock(self, connection=None):
         with (
             nullcontext(connection)
@@ -365,6 +387,7 @@ CREATE TABLE IF NOT EXISTS findings(id TEXT PRIMARY KEY,session_id TEXT NOT NULL
             )
         return items
 
+    @synchronized
     def assets(self, connection=None):
         sql = """SELECT a.*,i.name,i.code,i.unit,i.tracking_mode,
 CASE WHEN l.parent IS NULL THEN l.name ELSE p.name || ' / ' || l.name END AS location_name,l.parent,
@@ -830,6 +853,7 @@ LEFT JOIN suppliers s ON s.id=a.supplier_id ORDER BY i.name,a.number"""
             "movement_warning": asset["version"] != snapshot["version"],
         }
 
+    @synchronized
     def backup(self):
         target = (
             self.root
@@ -851,3 +875,89 @@ LEFT JOIN suppliers s ON s.id=a.supplier_id ORDER BY i.name,a.number"""
             ):
                 raise ValueError("Резервная копия не прошла проверку")
         return target
+
+    def backup_path(self, filename):
+        if (
+            not isinstance(filename, str)
+            or Path(filename).name != filename
+            or not filename.endswith(".sqlite3")
+        ):
+            raise ValueError("Некорректное имя резервной копии")
+        path = self.root / "backups" / filename
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("Резервная копия не найдена")
+        return path
+
+    @synchronized
+    def list_backups(self):
+        result = []
+        for path in (self.root / "backups").glob("*.sqlite3"):
+            if path.is_symlink() or not path.is_file():
+                continue
+            stat = path.stat()
+            result.append(
+                {
+                    "filename": path.name,
+                    "created_at": datetime.fromtimestamp(
+                        stat.st_mtime, timezone.utc
+                    ).isoformat(),
+                    "size": stat.st_size,
+                }
+            )
+        return sorted(result, key=lambda row: row["created_at"], reverse=True)
+
+    @synchronized
+    def delete_backup(self, filename, actor):
+        path = self.backup_path(filename)
+        with self.transaction() as c:
+            self.audit(c, actor["id"], "backup.delete", {"filename": filename})
+        path.unlink()
+        return {"deleted": True}
+
+    @synchronized
+    def restore_backup(self, filename, actor):
+        path = self.backup_path(filename)
+        with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as source:
+            if (
+                source.execute("PRAGMA integrity_check").fetchall() != [("ok",)]
+                or source.execute("PRAGMA foreign_key_check").fetchall()
+            ):
+                raise ValueError("Копия повреждена")
+            metadata = dict(source.execute("SELECT key,value FROM meta"))
+            current = dict(
+                (r["key"], r["value"]) for r in self.read("SELECT key,value FROM meta")
+            )
+            if metadata.get("database_uuid") != current.get("database_uuid"):
+                raise ValueError("Копия принадлежит другой базе")
+            if metadata.get("schema_version") != current.get("schema_version"):
+                raise ValueError("Версия схемы копии отличается")
+            with closing(self.connect()) as live:
+                tables = [
+                    r[0]
+                    for r in live.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+                    )
+                ]
+                for table in tables:
+                    live_columns = [
+                        tuple(r)
+                        for r in live.execute("PRAGMA table_info(" + table + ")")
+                    ]
+                    backup_columns = list(
+                        source.execute("PRAGMA table_info(" + table + ")")
+                    )
+                    if live_columns != backup_columns:
+                        raise ValueError("Структура копии отличается: " + table)
+            safety = self.backup()
+            with closing(self.connect()) as destination:
+                source.backup(destination)
+        self._generation += 1
+        with self.transaction() as c:
+            c.execute("DELETE FROM tokens")
+            self.audit(
+                c,
+                actor["id"],
+                "backup.restore",
+                {"filename": filename, "safety_backup": safety.name},
+            )
+        return {"restored": True, "safety_backup": safety.name, "login_required": True}

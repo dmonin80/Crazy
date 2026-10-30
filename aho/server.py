@@ -15,7 +15,7 @@ from .security import action_permission
 
 def create_app(root, local_config=None):
     store = Store(root)
-    app = FastAPI(title="АХО — учёт имущества", version="0.3.0")
+    app = FastAPI(title="АХО — учёт имущества", version="0.3.1")
     app.state.store = store
 
     @app.exception_handler(ValueError)
@@ -57,7 +57,7 @@ def create_app(root, local_config=None):
     def health():
         return {
             "status": "ok",
-            "version": "0.3.0",
+            "version": "0.3.1",
             "service": "aho_inventory",
             "instance_id": local_config["instance_id"] if local_config else None,
             "root_key": local_config.get("root_key") if local_config else None,
@@ -439,6 +439,25 @@ def create_app(root, local_config=None):
     def backup(p: dict, u=Depends(user)):
         require(u, "backup")
         return {"filename": store.backup().name}
+
+    @app.get("/backups")
+    def backups(u=Depends(user)):
+        require(u, "backup")
+        return store.list_backups()
+
+    @app.post("/backups/delete")
+    def delete_backup(p: dict, u=Depends(user)):
+        admin_only(u)
+        if p.get("confirm") is not True:
+            raise ValueError("Подтвердите удаление")
+        return store.delete_backup(p.get("filename"), u)
+
+    @app.post("/backups/restore")
+    def restore_backup(p: dict, u=Depends(user)):
+        admin_only(u)
+        if p.get("confirm") is not True:
+            raise ValueError("Подтвердите восстановление")
+        return store.restore_backup(p.get("filename"), u)
 
     @app.post("/labels")
     def labels(p: dict, u=Depends(user)):
