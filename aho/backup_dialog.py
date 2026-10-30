@@ -35,6 +35,10 @@ class BackupDialog(W.QDialog):
             ("Восстановить", self.restore, True),
         ]:
             button = W.QPushButton(title)
+            if title == "Удалить":
+                button.setProperty("role", "danger")
+            elif title == "Создать копию":
+                button.setProperty("role", "accent")
             button.clicked.connect(lambda checked=False, f=fn: client.safe(f))
             bar.addWidget(button)
             if admin:

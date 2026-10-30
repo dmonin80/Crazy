@@ -1,8 +1,8 @@
-# АХО — Инвентаризация 0.3.1
+# АХО — Инвентаризация 0.3.2
 
-[Скачать готовый архив AHO_Inventory_v0.3.1.zip](https://github.com/dmonin80/Crazy/raw/refs/heads/main/AHO_Inventory_v0.3.1.zip)
+[Скачать готовый архив AHO_Inventory_v0.3.2.zip](https://github.com/dmonin80/Crazy/raw/refs/heads/main/AHO_Inventory_v0.3.2.zip)
 
-[Инструкция запуска и обновления](QUICK_START_RU.md) · [Изменения и результаты проверок](docs/RELEASE_0.3.1_RU.md)
+[Инструкция запуска и обновления](QUICK_START_RU.md) · [Изменения и результаты проверок](docs/RELEASE_0.3.2_RU.md)
 
 Архив содержит исходники. Для Windows установите Python 3.12 или 3.14, распакуйте архив и запустите `start_local.bat`. Зависимости устанавливаются автоматически. Windows EXE не включён.
 

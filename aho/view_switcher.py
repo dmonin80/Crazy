@@ -22,9 +22,7 @@ class ViewSwitcher(W.QWidget):
             button.setSizePolicy(
                 W.QSizePolicy.Policy.Expanding, W.QSizePolicy.Policy.Fixed
             )
-            button.setStyleSheet(
-                "QPushButton {font-size:17px;font-weight:600;padding:14px;border:1px solid #9db6ce;border-radius:7px;background:#eaf1f8;color:#173e65} QPushButton:checked {background:#245b88;color:white;border:2px solid #19486f} QPushButton:hover:!checked {background:#dceafb}"
-            )
+            button.setObjectName("viewTab")
             self.group.addButton(button, index)
             self.buttons.append(button)
             layout.addWidget(button, 1)

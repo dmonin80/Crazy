@@ -24,10 +24,10 @@ class ImportDialog(W.QDialog):
         self.setMinimumSize(820, 540)
         layout = W.QVBoxLayout(self)
         filename = W.QLabel(self.path.name)
-        filename.setStyleSheet('font-size:17px;font-weight:600;color:#17436b')
+        filename.setStyleSheet('font-size:17px;font-weight:600;color:#16324F')
         layout.addWidget(filename)
         self.steps=W.QLabel('1. Файл  →  2. Колонки  →  3. Проверка  →  4. Изменения  →  5. Импорт')
-        self.steps.setStyleSheet('padding:10px;background:#eef4fa;font-weight:600;color:#17436b');layout.addWidget(self.steps)
+        self.steps.setStyleSheet('padding:10px;background:#F3F6FA;font-weight:600;color:#16324F');layout.addWidget(self.steps)
         note = W.QLabel('Проверьте лист и строку заголовков. Названия и коды сохраняются как в исходном файле. Дробные количества принимаются без округления; пустое количество требует уточнения.')
         note.setWordWrap(True)
         layout.addWidget(note)
@@ -126,7 +126,7 @@ class ImportDialog(W.QDialog):
             self.validated = None
             self.import_button.setEnabled(False)
             self.summary.setText(str(exc))
-            self.summary.setStyleSheet('color:#ae2020')
+            self.summary.setStyleSheet('color:#DC2626')
 
     def basic(self):
         return {'filename': self.path.name, 'data': self.data,
@@ -198,7 +198,7 @@ class ImportDialog(W.QDialog):
         self.result = result
         self.validated = p if not result['errors'] else None
         self.import_button.setEnabled(self.validated is not None)
-        self.summary.setStyleSheet('color:#ae2020' if result['errors'] else 'color:#17623b')
+        self.summary.setStyleSheet('color:#DC2626' if result['errors'] else 'color:#0F766E')
         self.summary.setText(f"Позиций: {len(result['rows'])} · Сумма количеств: {result['units']} · Ошибок: {len(result['errors'])} · Повторов кодов: {len(result['duplicates'])} · Исключено: {len(result['excluded'])} · Служебных строк пропущено: {len(result['skipped'])}. " + ('Исправьте настройки или явно исключите неподходящие строки.' if result['errors'] else 'Данные прошли проверку.'))
         self.fill(self.accepted_rows, ['Строки файла', 'Номенклатура', 'Код', 'Единица измерения', 'Количество'],
                   [[', '.join(map(str, r['rows'])), r['name'], r['code'], r['unit'], r['quantity']] for r in result['rows'][:100]])
@@ -286,7 +286,7 @@ class ImportDialog(W.QDialog):
                       if before['initial' if key == 'quantity' else key] != after[key]]
             rows.append([change['code'], 'Изменено: ' + ', '.join(fields), before['name'],
                          amount(before, 'initial'), after['name'], amount(after, 'quantity')])
-            colors.append('#fff0bc')
+            colors.append('#FFF8EB')
         for row in result['missing_rows']:
             rows.append([row['code'], 'Отсутствует в выгрузке', row['name'], amount(row, 'initial'), '', ''])
             colors.append('#f9dddd')

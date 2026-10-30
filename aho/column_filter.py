@@ -21,8 +21,8 @@ class FilterHeader(W.QHeaderView):
         super().paintSection(painter,rect,index)
         painter.save()
         area=QtCore.QRect(rect.right()-22,rect.top()+3,20,max(16,rect.height()-6))
-        painter.fillRect(area,QtGui.QColor('#d0e5f5' if index in self.active else '#e8eff5'))
-        painter.setPen(QtGui.QColor('#1265a2' if index in self.active else '#526879'))
+        painter.fillRect(area,QtGui.QColor('#DBEAFE' if index in self.active else '#EDF2F8'))
+        painter.setPen(QtGui.QColor('#2563EB' if index in self.active else '#526879'))
         painter.drawText(area,QtCore.Qt.AlignmentFlag.AlignCenter,'▼' if index not in self.active else '●')
         painter.restore()
     def mousePressEvent(self,event):

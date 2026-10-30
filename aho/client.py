@@ -47,7 +47,7 @@ class PendingOperation(RuntimeError):
 class Client(W.QMainWindow):
     def __init__(self, local_url=None, settings_root=None, server_url=None):
         super().__init__()
-        self.setWindowTitle("АХО — система инвентаризации · 0.3.1")
+        self.setWindowTitle("АХО — система инвентаризации · 0.3.2")
         self.resize(1400, 800)
         root = (
             Path(settings_root)
@@ -94,18 +94,52 @@ class Client(W.QMainWindow):
         box = W.QWidget()
         self.setCentralWidget(box)
         layout = W.QVBoxLayout(box)
+        from .theme import STYLESHEET, FOOTER, brand_icon, metric
+
+        self.setStyleSheet(STYLESHEET)
+        header = W.QFrame()
+        header.setObjectName("brandHeader")
+        header_layout = W.QHBoxLayout(header)
+        header_layout.setContentsMargins(18, 12, 18, 12)
+        logo = W.QLabel()
+        logo.setPixmap(brand_icon())
+        header_layout.addWidget(logo)
+        brand = W.QVBoxLayout()
+        header_layout.addLayout(brand, 1)
         title = W.QLabel("Система инвентаризации имущества")
-        title.setStyleSheet("font-size:24px;font-weight:600;padding:16px;color:#17436b")
-        layout.addWidget(title)
-        self.user_label = W.QLabel("Пользователь: вход не выполнен")
-        self.user_label.setStyleSheet(
-            "font-size:14px;font-weight:600;color:#17436b;padding:8px 18px"
-        )
-        self.menuBar().setCornerWidget(self.user_label, QtCore.Qt.Corner.TopRightCorner)
+        title.setObjectName("brandTitle")
+        brand.addWidget(title)
+        subtitle = W.QLabel("Учёт  •  Перемещение  •  Инвентаризация")
+        subtitle.setObjectName("brandSubtitle")
+        brand.addWidget(subtitle)
+        account = W.QVBoxLayout()
+        header_layout.addLayout(account)
+        self.user_label = W.QLabel("Вход не выполнен")
+        self.user_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
+        account.addWidget(self.user_label)
+        switch = W.QPushButton("Сменить пользователя")
+        switch.setObjectName("switchUser")
+        switch.clicked.connect(lambda: self.safe(self.login))
+        account.addWidget(switch)
+        layout.addWidget(header)
         from .view_switcher import ViewSwitcher
 
         self.view_tabs = ViewSwitcher()
         layout.addWidget(self.view_tabs)
+        self.section_title = W.QLabel("Нулевой склад")
+        self.section_title.setObjectName("sectionTitle")
+        layout.addWidget(self.section_title)
+        metrics = W.QHBoxLayout()
+        layout.addLayout(metrics)
+        self.metric_values = []
+        for label, accent in [
+            ("Позиций номенклатуры", "blue"),
+            ("Карточек имущества", "teal"),
+            ("Складов с имуществом", "amber"),
+        ]:
+            frame, value = metric(label, accent)
+            metrics.addWidget(frame, 1)
+            self.metric_values.append(value)
         bar = W.QHBoxLayout()
         layout.addLayout(bar)
         for name, fn in [
@@ -121,6 +155,8 @@ class Client(W.QMainWindow):
             ("Экспорт XLSX", self.export),
         ]:
             button = W.QPushButton(name)
+            if name == "Переместить":
+                button.setProperty("role", "primary")
             button.clicked.connect(lambda checked=False, f=fn: self.safe(f))
             bar.addWidget(button)
             self.buttons[name] = button
@@ -194,7 +230,7 @@ class Client(W.QMainWindow):
         self.security_banner = W.QLabel()
         self.security_banner.setWordWrap(True)
         self.security_banner.setStyleSheet(
-            "padding:8px;background:#fff0bc;color:#674b00"
+            "padding:8px;background:#FFF8EB;color:#D97706"
         )
         layout.insertWidget(1, self.security_banner)
         self.update_connection()
@@ -218,9 +254,11 @@ class Client(W.QMainWindow):
         system.addAction("Резервные копии", lambda: self.safe(self.create_backup))
         system.addAction("Журнал действий", lambda: self.safe(self.show_audit))
         self.statusBar().showMessage("Подключитесь к серверу")
-        self.setStyleSheet(
-            "QPushButton {padding:8px;border:1px solid #b6c7d6;border-radius:5px;background:#edf4fa} QTableView {alternate-background-color:#edf4fa;gridline-color:#dbe3eb;border:1px solid #dbe3eb} QLineEdit {padding:6px} QHeaderView::section {padding:7px;background:#f0f4f8;border:0;border-right:1px solid #dbe3eb;font-weight:600}"
-        )
+        self.credits = W.QLabel(FOOTER)
+        self.credits.setObjectName("credits")
+        self.credits.setWordWrap(True)
+        self.credits.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.credits)
         self.table.setAlternatingRowColors(True)
         self.populate()
         for label, button in self.buttons.items():
@@ -379,7 +417,7 @@ class Client(W.QMainWindow):
             ("● На связи" if self._online else "● Нет связи") + " · Обновлено: " + stamp
         )
         self.connection_label.setStyleSheet(
-            "color:" + ("#17623b" if self._online else "#ae2020")
+            "color:" + ("#0F766E" if self._online else "#DC2626")
         )
         address = urlsplit(self.settings.get("server", ""))
         insecure = address.scheme == "http" and address.hostname not in (
@@ -545,6 +583,22 @@ class Client(W.QMainWindow):
 
     def populate(self):
         zero = self.view_tabs.currentIndex() == 0
+        self.section_title.setText("Нулевой склад" if zero else "Имущество по складам")
+        for label, value in zip(
+            self.metric_values,
+            [
+                len(self.stock_rows),
+                len(self.rows),
+                len(
+                    {
+                        r.get("parent") or r.get("location")
+                        for r in self.rows
+                        if r.get("location") != "zero"
+                    }
+                ),
+            ],
+        ):
+            label.setText(str(value))
         columns = STOCK_COLUMNS if zero else COLUMNS
         source = self.stock_rows if zero else self.rows
         query = self.search.text().strip().casefold()
@@ -574,7 +628,7 @@ class Client(W.QMainWindow):
 
         if self._displayed_view != zero:
             widths = (
-                [350, 145, 85, 135, 140, 110, 135, 165]
+                [330, 145, 100, 140, 165, 140, 145, 175]
                 if zero
                 else [250, 165, 140, 185, 130, 110, 185, 230, 180, 190]
             )

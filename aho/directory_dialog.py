@@ -22,7 +22,7 @@ class DirectoryEditor(W.QDialog):
             self.parent=ReferenceCombo(roots,'— выберите основной склад —')
             if record:self.parent.setCurrentIndex(self.parent.findData(record['parent']));self.parent.setEnabled(False)
             form.addRow('Основной склад:',self.parent)
-        self.error=W.QLabel();self.error.setWordWrap(True);self.error.setStyleSheet('color:#ae2020');form.addRow(self.error)
+        self.error=W.QLabel();self.error.setWordWrap(True);self.error.setStyleSheet('color:#DC2626');form.addRow(self.error)
         buttons=W.QDialogButtonBox(W.QDialogButtonBox.StandardButton.Save|W.QDialogButtonBox.StandardButton.Cancel)
         buttons.button(W.QDialogButtonBox.StandardButton.Save).setText('Сохранить');buttons.button(W.QDialogButtonBox.StandardButton.Cancel).setText('Отмена')
         form.addRow(buttons);buttons.accepted.connect(self.save);buttons.rejected.connect(self.reject)
@@ -53,7 +53,7 @@ class DirectoriesDialog(W.QDialog):
         super().__init__(client);self.client=client;self.data={};self.admin=client.api('/me')['role']=='admin'
         self.setWindowTitle('Справочники');self.resize(1080,660)
         layout=W.QVBoxLayout(self)
-        title=W.QLabel('Справочники учёта');title.setStyleSheet('font-size:20px;font-weight:600;color:#17436b');layout.addWidget(title)
+        title=W.QLabel('Справочники учёта');title.setStyleSheet('font-size:20px;font-weight:600;color:#16324F');layout.addWidget(title)
         hint=W.QLabel('Заполните справочники заранее. Архивные записи сохраняют историю и не предлагаются для новых назначений. Единицы измерения поступают только из 1С.')
         hint.setWordWrap(True);layout.addWidget(hint)
         bar=W.QHBoxLayout();layout.addLayout(bar)
@@ -78,7 +78,7 @@ class DirectoriesDialog(W.QDialog):
         refresh.clicked.connect(lambda:self.safe(self.reload));close.clicked.connect(self.accept)
         self.search.textChanged.connect(lambda _:self.populate());self.archived.toggled.connect(lambda _:self.populate())
         self.tabs.currentChanged.connect(lambda _:self.populate())
-        self.error=W.QLabel();self.error.setWordWrap(True);self.error.setStyleSheet('color:#ae2020');layout.addWidget(self.error)
+        self.error=W.QLabel();self.error.setWordWrap(True);self.error.setStyleSheet('color:#DC2626');layout.addWidget(self.error)
         self.reload()
 
     def safe(self,fn):

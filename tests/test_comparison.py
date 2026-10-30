@@ -42,7 +42,7 @@ def test_comparison_details_and_no_writes(tmp_path):
     assert table.item(1, 3).text() == '1,25 л'
     assert table.item(1, 5).text() == '2,75 кг'
     assert 'наименование' in table.item(1, 1).text()
-    assert [table.item(i, 0).background().color().name() for i in range(3)] == ['#d9f2df', '#fff0bc', '#f9dddd']
+    assert [table.item(i, 0).background().color().name() for i in range(3)] == ['#d9f2df', '#fff8eb', '#f9dddd']
     dialog.close()
     owner.close()
 

@@ -125,7 +125,7 @@ def desktop(root, lan=False):
     window.setWindowTitle(
         "АХО — инвентаризация · "
         + ("СЕРВЕР ОБЩЕЙ БАЗЫ" if lan else "сервер и клиент на этом ПК")
-        + " · 0.3.1"
+        + " · 0.3.2"
     )
     window.statusBar().showMessage("Локальный сервер запущен · " + url(config))
 
@@ -268,7 +268,7 @@ def network_desktop(root, address=None, ca_file=None):
     window = Client(settings_root=root, server_url=address.rstrip("/"))
     if ca_file:
         window.settings["ca_file"] = ca_file
-    window.setWindowTitle("АХО — общая база · " + address + " · 0.3.1")
+    window.setWindowTitle("АХО — общая база · " + address + " · 0.3.2")
     menu = window.menuBar().addMenu("Система")
     menu.addAction(
         "Адрес сервера",

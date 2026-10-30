@@ -15,7 +15,7 @@ from .security import action_permission
 
 def create_app(root, local_config=None):
     store = Store(root)
-    app = FastAPI(title="АХО — учёт имущества", version="0.3.1")
+    app = FastAPI(title="АХО — учёт имущества", version="0.3.2")
     app.state.store = store
 
     @app.exception_handler(ValueError)
@@ -57,7 +57,7 @@ def create_app(root, local_config=None):
     def health():
         return {
             "status": "ok",
-            "version": "0.3.1",
+            "version": "0.3.2",
             "service": "aho_inventory",
             "instance_id": local_config["instance_id"] if local_config else None,
             "root_key": local_config.get("root_key") if local_config else None,

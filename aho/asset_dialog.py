@@ -12,7 +12,7 @@ class AssetDialog(W.QDialog):
         layout = W.QVBoxLayout(self)
         title = W.QLabel(asset["name"])
         title.setWordWrap(True)
-        title.setStyleSheet("font-size:20px;font-weight:600;color:#17436b")
+        title.setStyleSheet("font-size:20px;font-weight:600;color:#16324F")
         layout.addWidget(title)
         tabs = W.QTabWidget()
         layout.addWidget(tabs)

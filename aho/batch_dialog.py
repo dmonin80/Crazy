@@ -31,7 +31,7 @@ class BatchStockDialog(W.QDialog):
         self.date=W.QDateEdit(QtCore.QDate.currentDate());self.date.setCalendarPopup(True);self.date.setDisplayFormat('dd.MM.yyyy')
         self.number=W.QLineEdit();self.comment=W.QLineEdit()
         for label,widget in [('Ответственное лицо:',self.responsible),('Поставщик:',self.supplier),('Дата документа:',self.date),('Номер документа:',self.number),('Комментарий:',self.comment)]:details.addRow(label,widget)
-        self.error=W.QLabel();self.error.setWordWrap(True);self.error.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.TextSelectableByMouse);self.error.setStyleSheet('color:#ae2020');layout.addWidget(self.error)
+        self.error=W.QLabel();self.error.setWordWrap(True);self.error.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.TextSelectableByMouse);self.error.setStyleSheet('color:#DC2626');layout.addWidget(self.error)
         bar=W.QHBoxLayout();layout.addLayout(bar)
         self.check=W.QPushButton('Проверить результат');self.check.hide();self.check.clicked.connect(self.check_result);bar.addWidget(self.check)
         bar.addStretch();cancel=W.QPushButton('Отмена');cancel.clicked.connect(self.reject);bar.addWidget(cancel)

@@ -31,7 +31,7 @@ class MoveAssetsDialog(W.QDialog):
         self.date=W.QDateEdit(QtCore.QDate.currentDate());self.date.setCalendarPopup(True);self.date.setDisplayFormat('dd.MM.yyyy')
         self.number=W.QLineEdit();self.comment=W.QLineEdit()
         for label,field in [('Ответственное лицо:',self.responsible),('Поставщик:',self.supplier),('Дата документа:',self.date),('Номер документа:',self.number),('Комментарий:',self.comment)]:layout.addRow(label,field)
-        self.error=W.QLabel();self.error.setWordWrap(True);self.error.setStyleSheet('color:#ae2020');layout.addRow(self.error)
+        self.error=W.QLabel();self.error.setWordWrap(True);self.error.setStyleSheet('color:#DC2626');layout.addRow(self.error)
         self.request=None
         buttons=W.QDialogButtonBox(W.QDialogButtonBox.StandardButton.Ok|W.QDialogButtonBox.StandardButton.Cancel)
         buttons.button(W.QDialogButtonBox.StandardButton.Ok).setText('Провести');buttons.button(W.QDialogButtonBox.StandardButton.Cancel).setText('Отмена')
