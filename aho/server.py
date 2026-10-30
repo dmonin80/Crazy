@@ -15,7 +15,7 @@ from .security import action_permission
 
 def create_app(root, local_config=None):
     store = Store(root)
-    app = FastAPI(title="АХО — учёт имущества", version="0.3.2")
+    app = FastAPI(title="АХО — учёт имущества", version="0.3.3")
     app.state.store = store
 
     @app.exception_handler(ValueError)
@@ -57,7 +57,7 @@ def create_app(root, local_config=None):
     def health():
         return {
             "status": "ok",
-            "version": "0.3.2",
+            "version": "0.3.3",
             "service": "aho_inventory",
             "instance_id": local_config["instance_id"] if local_config else None,
             "root_key": local_config.get("root_key") if local_config else None,
@@ -231,7 +231,9 @@ def create_app(root, local_config=None):
 
     @app.get("/documents/{document_id}")
     def document_lines(document_id: str, u=Depends(user)):
-        return store.read("SELECT * FROM lines WHERE document_id=?", (document_id,))
+        from .history import document_lines
+
+        return document_lines(store, document_id)
 
     @app.get("/locations")
     def locations(u=Depends(user)):
@@ -424,7 +426,9 @@ def create_app(root, local_config=None):
     @app.get("/audit")
     def audit(u=Depends(user)):
         require(u, "audit")
-        return store.read("SELECT * FROM audit ORDER BY at DESC")
+        from .history import audit_entries
+
+        return audit_entries(store)
 
     @app.get("/requests/{rid}")
     def request_result(rid: str, u=Depends(user)):

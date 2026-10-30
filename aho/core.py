@@ -118,6 +118,10 @@ CREATE TABLE IF NOT EXISTS findings(id TEXT PRIMARY KEY,session_id TEXT NOT NULL
             return [dict(r) for r in c.execute(sql, args)]
 
     def audit(self, c, user, action, data):
+        actor = c.execute("SELECT name FROM users WHERE id=?", (user,)).fetchone()
+        data = dict(data)
+        if actor:
+            data["_actor_name"] = actor["name"]
         c.execute(
             "INSERT INTO audit VALUES(?,?,?,?,?)",
             (uid(), now(), user, action, json.dumps(data, ensure_ascii=False)),
@@ -262,6 +266,8 @@ CREATE TABLE IF NOT EXISTS findings(id TEXT PRIMARY KEY,session_id TEXT NOT NULL
                     base64.b64decode(payload.get("data", ""))
                 ).hexdigest()
                 audit_data["result"] = result
+            if isinstance(result, dict) and result.get("document_id"):
+                audit_data = dict(audit_data, document_id=result["document_id"])
             self.audit(c, user["id"], action, audit_data)
             c.execute(
                 "INSERT INTO requests VALUES(?,?,?,?)",

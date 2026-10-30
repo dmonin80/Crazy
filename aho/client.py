@@ -47,7 +47,7 @@ class PendingOperation(RuntimeError):
 class Client(W.QMainWindow):
     def __init__(self, local_url=None, settings_root=None, server_url=None):
         super().__init__()
-        self.setWindowTitle("АХО — система инвентаризации · 0.3.2")
+        self.setWindowTitle("АХО — система инвентаризации · 0.3.3")
         self.resize(1400, 800)
         root = (
             Path(settings_root)
@@ -1050,9 +1050,24 @@ class Client(W.QMainWindow):
         )
         table.setEditTriggers(W.QAbstractItemView.EditTrigger.NoEditTriggers)
         for i, row in enumerate(rows):
-            for j, key in enumerate(("at", "user_id", "action", "data")):
+            for j, key in enumerate(("at", "actor_name", "action_label", "summary")):
                 table.setItem(i, j, W.QTableWidgetItem(str(row[key])))
-        table.resizeColumnsToContents()
+        table.setWordWrap(True)
+        table.setColumnWidth(0, 160)
+        table.setColumnWidth(1, 180)
+        table.setColumnWidth(2, 220)
+        table.horizontalHeader().setStretchLastSection(True)
+        for i, row in enumerate(rows):
+            stamp = QtCore.QDateTime.fromString(
+                row["at"], QtCore.Qt.DateFormat.ISODateWithMs
+            )
+            if stamp.isValid():
+                table.item(i, 0).setText(
+                    stamp.toLocalTime().toString("dd.MM.yyyy HH:mm:ss")
+                )
+            for j in range(4):
+                table.item(i, j).setToolTip(table.item(i, j).text())
+        table.resizeRowsToContents()
         layout.addWidget(table)
         close = W.QPushButton("Закрыть")
         close.clicked.connect(dialog.accept)

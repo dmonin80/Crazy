@@ -1,7 +1,6 @@
 """Document journal, line details and a printable transfer form."""
 
 import html
-import json
 from PySide6 import QtWidgets as W
 
 
@@ -72,19 +71,20 @@ class DocumentsDialog(W.QDialog):
         row, lines = self.selected()
         esc = lambda value: html.escape(str(value))
         cells = []
-        for line in lines:
-            before = json.loads(line["before_json"]) if line["before_json"] else {}
-            after = json.loads(line["after_json"])
+        from .history import issued_lines
+
+        for line in issued_lines(lines):
             cells.append(
                 "<tr>"
                 + "".join(
                     "<td>" + esc(v) + "</td>"
                     for v in [
-                        after.get("number", ""),
-                        after.get("name", ""),
-                        after.get("quantity_decimal", "1"),
-                        before.get("location_name", "Нулевой склад"),
-                        after.get("location_name", ""),
+                        line["number"],
+                        line["name"],
+                        line["quantity"],
+                        line["unit"],
+                        line["source"],
+                        line["destination"],
                     ]
                 )
                 + "</tr>"
@@ -96,7 +96,7 @@ class DocumentsDialog(W.QDialog):
             + esc(row["date"])
             + "</p><p>Автор: "
             + esc(row["author"])
-            + '</p><table border="1" cellspacing="0" cellpadding="6"><tr><th>Номер</th><th>Наименование</th><th>Количество после операции</th><th>Откуда</th><th>Куда</th></tr>'
+            + '</p><table border="1" cellspacing="0" cellpadding="6"><tr><th>Номер</th><th>Наименование</th><th>Количество выдано</th><th>Единица измерения</th><th>Откуда</th><th>Куда</th></tr>'
             + "".join(cells)
             + "</table><p>"
             + esc(row["comment"])
@@ -112,16 +112,49 @@ class DocumentsDialog(W.QDialog):
         view = W.QTextBrowser()
         view.setHtml(content)
         layout.addWidget(view)
+        bar = W.QHBoxLayout()
+        layout.addLayout(bar)
+        for caption, fn in [
+            ("Печать", lambda: self.print_content(content)),
+            ("Сохранить PDF", lambda: self.save_pdf(content)),
+        ]:
+            button = W.QPushButton(caption)
+            button.clicked.connect(lambda checked=False, f=fn: self.client.safe(f))
+            bar.addWidget(button)
+            button.setEnabled(
+                bool(
+                    self.client.current_user.get("is_admin")
+                    or "export" in self.client.current_user.get("permissions", [])
+                )
+            )
         close = W.QPushButton("Закрыть")
         close.clicked.connect(dialog.accept)
-        layout.addWidget(close)
+        bar.addWidget(close)
         dialog.exec()
 
+    def print_content(self, content):
+        from .security import require
+        from PySide6 import QtGui, QtPrintSupport
+
+        require(self.client.current_user, "export")
+        printer = QtPrintSupport.QPrinter(
+            QtPrintSupport.QPrinter.PrinterMode.HighResolution
+        )
+        printer.setPageSize(QtGui.QPageSize(QtGui.QPageSize.PageSizeId.A4))
+        dialog = QtPrintSupport.QPrintDialog(printer, self)
+        if dialog.exec() != W.QDialog.DialogCode.Accepted:
+            return
+        document = QtGui.QTextDocument()
+        document.setHtml(content)
+        document.print_(printer)
+
     def pdf(self):
+        self.save_pdf(self.content())
+
+    def save_pdf(self, content):
         from .security import require
 
         require(self.client.current_user, "export")
-        content = self.content()
         path, _ = W.QFileDialog.getSaveFileName(
             self, "Печатная форма", "movement.pdf", "PDF (*.pdf)"
         )
